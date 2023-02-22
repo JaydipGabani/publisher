@@ -1,0 +1,31 @@
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  annotations:
+    meta.helm.sh/release-name: dapr
+    meta.helm.sh/release-namespace: dapr-system
+  creationTimestamp: '2022-12-22T22:22:36Z'
+  generation: 1
+  labels:
+    app.kubernetes.io/component: config
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dapr
+    app.kubernetes.io/part-of: dapr
+    app.kubernetes.io/version: 1.9.5
+  name: daprsystem
+  namespace: dapr-system
+spec:
+  metric:
+    enabled: true
+  mtls:
+    allowedClockSkew: 15m
+    enabled: true
+    workloadCertTTL: 24h
+  components:
+    - name: pubsub
+      type: redis
+      metadata:
+        - name: redisHost
+          value: redis-master.default.svc.cluster.local:6379
+        - name: redisPassword
+          value: FQ3GFNTa4Y

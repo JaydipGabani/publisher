@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pub
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+  namespace: pub
+spec:
+  type: pubsub.redis
+  version: v1
+  metadata:
+  # These settings will work out of the box if you use `helm install
+  # bitnami/redis`.  If you have your own setup, replace
+  # `redis-master:6379` with your own Redis master address, and the
+  # Redis password with your own Secret's name. For more information,
+  # see https://docs.dapr.io/operations/components/component-secrets .
+  - name: redisHost
+    value: redis-master.default.svc.cluster.local:6379
+  - name: redisPassword
+    value: KhSMOy2uj9
+# scopes:
+# - orders
+# - checkout
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  namespace: pub
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: redis-master.default.svc.cluster.local:6379
+  - name: redisPassword
+    value: KhSMOy2uj9
+# scopes:
+# - orders
+# - checkout
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pub
+  namespace: gatekeeper-system
+  labels:
+    app: pub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pub
+  template:
+    metadata:
+      labels:
+        app: pub
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "orders"
+        dapr.io/enable-api-logging: "true"
+        dapr.io/app-port: "6001"
+        dapr.io/enable-metrics: "true"
+    spec:
+      containers:
+      - name: go-pub
+        image: jd/pub:latest
+        imagePullPolicy: Never
