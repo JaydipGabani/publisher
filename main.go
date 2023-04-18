@@ -105,7 +105,7 @@ func (r *Dapr) Send() {
 	ctx := context.Background()
 	start_time := time.Now()
 	log.Println("starting publish")
- 
+	
 	for i := 0; i < total; i++ {
 		test := getObj(strconv.Itoa(i))
 		jsonData, err := json.Marshal(test)
