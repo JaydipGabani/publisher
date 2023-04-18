@@ -50,7 +50,7 @@ type PubsubMsg struct {
 	ResourceLabels        map[string]string `json:"resourceLabels,omitempty"`
 	// Additional Metadata for benchmarking
 	BrokerName            string            `json:"brokerName,omitempty"`
-    Timestamp             string            `json:"timestamp,omitempty"`
+	Timestamp             string            `json:"timestamp,omitempty"`
 }
 
 func main() {
@@ -70,7 +70,7 @@ func main() {
 }
 
 func getObj(i string) interface{} {
-    now := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
+	now := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
 	return PubsubMsg{
 		Key:                   i,
 		ID:                    now,
@@ -90,7 +90,7 @@ func getObj(i string) interface{} {
 		ResourceNamespace:     "nginx",
 		ResourceName:          "dywuperf-deployment-10kpods-69bd64c867-h2wdx",
 		ResourceLabels:        map[string]string{"app": "dywuperf-app-100kpods", "pod-template-hash": "69bd64c867"},
-        Timestamp:             now,
+		Timestamp:             now,
 		BrokerName:            BROKERNAME}
 }
 
@@ -113,7 +113,7 @@ func (r *Dapr) Send() {
 			log.Fatalf("error marshaling data: %v", err)
 		}
 
-        for _, c := range r.client {
+		for _, c := range r.client {
 			//Using Dapr SDK to publish a topic
 			// log.Println("Published data: " + string(jsonData))
 			if err := c.client.PublishEvent(ctx, PUBSUB_NAME, TOPIC_NAME, jsonData); err != nil {
