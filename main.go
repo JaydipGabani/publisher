@@ -16,6 +16,7 @@ import (
 var (
 	PUBSUB_NAME = "pubsub"
 	TOPIC_NAME  = "audit"
+	BROKERNAME = os.Getenv("BROKERNAME")
 )
 
 type Client struct {
@@ -47,6 +48,9 @@ type PubsubMsg struct {
 	ResourceNamespace     string            `json:"resourceNamespace,omitempty"`
 	ResourceName          string            `json:"resourceName,omitempty"`
 	ResourceLabels        map[string]string `json:"resourceLabels,omitempty"`
+	// Additional Metadata for benchmarking
+	BrokerName            string            `json:"brokerName,omitempty"`
+    Timestamp             string            `json:"timestamp,omitempty"`
 }
 
 func main() {
@@ -66,9 +70,10 @@ func main() {
 }
 
 func getObj(i string) interface{} {
+    now := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
 	return PubsubMsg{
 		Key:                   i,
-		ID:                    "2023-04-06T21:17:05Z",
+		ID:                    now,
 		Details:               map[string]interface{}{"missing_labels": []interface{}{"test"}},
 		EventType:             "violation_audited",
 		Group:                 "constraints.gatekeeper.sh",
@@ -84,7 +89,9 @@ func getObj(i string) interface{} {
 		ResourceKind:          "Pod",
 		ResourceNamespace:     "nginx",
 		ResourceName:          "dywuperf-deployment-10kpods-69bd64c867-h2wdx",
-		ResourceLabels:        map[string]string{"app": "dywuperf-app-100kpods", "pod-template-hash": "69bd64c867"}}
+		ResourceLabels:        map[string]string{"app": "dywuperf-app-100kpods", "pod-template-hash": "69bd64c867"},
+        Timestamp:             now,
+		BrokerName:            BROKERNAME}
 }
 
 func (r *Dapr) Send() {
@@ -98,7 +105,7 @@ func (r *Dapr) Send() {
 	ctx := context.Background()
 	start_time := time.Now()
 	log.Println("starting publish")
-	
+ 
 	for i := 0; i < total; i++ {
 		test := getObj(strconv.Itoa(i))
 		jsonData, err := json.Marshal(test)
@@ -106,7 +113,7 @@ func (r *Dapr) Send() {
 			log.Fatalf("error marshaling data: %v", err)
 		}
 
-		for _, c := range r.client {
+        for _, c := range r.client {
 			//Using Dapr SDK to publish a topic
 			// log.Println("Published data: " + string(jsonData))
 			if err := c.client.PublishEvent(ctx, PUBSUB_NAME, TOPIC_NAME, jsonData); err != nil {
