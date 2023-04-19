@@ -54,3 +54,5 @@ spec:
         env:
         - name: NUMBER
           value: "1000"
+        - name: BROKERNAME
+          value: "Redis"
