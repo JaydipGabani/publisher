@@ -1,4 +1,4 @@
----
+# ---
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
@@ -21,9 +21,9 @@ spec:
 #   name: pubsub
 #   namespace: gatekeeper-system
 # spec:
-  # type: pubsub.in-memory
-  # version: v1
-  # metadata: []
+#   type: pubsub.in-memory
+#   version: v1
+#   metadata: []
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -49,10 +49,16 @@ spec:
     spec:
       containers:
       - name: go-pub
-        image: docker.io/jaydipgabani/publisher:latest
+        image: docker.io/noreisch/test-publisher:0.0.13
         imagePullPolicy: Always
         env:
         - name: NUMBER
-          value: "1000"
+          value: "20000"
         - name: BROKERNAME
           value: "Redis"
+        - name: TARGETURI
+          value: ""
+        - name: FUNCTIONKEY
+          value: ""
+        - name: INGESTIONSERVICEBATCHSIZE
+          value: "1000"
