@@ -4,15 +4,16 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/dapr/go-sdk/client"
+	"github.com/google/uuid"
 )
 
-// code
 var (
 	PUBSUB_NAME = "pubsub"
 	TOPIC_NAME  = "audit"
@@ -51,6 +52,11 @@ type PubsubMsg struct {
 	// Additional Metadata for benchmarking
 	BrokerName            string            `json:"brokerName,omitempty"`
 	Timestamp             string            `json:"timestamp,omitempty"`
+	UserAgent             string            `json:"userAgent,omitempty"`
+	CorrelationId         string            `json:"correlationId,omitempty"`
+	PublishedTimestamp    string            `json:"publishedTimestamp,omitempty"`
+	ReceivedTimestamp     string            `json:"receivedTimestamp,omitempty"`
+    BatchCorrelationId    string            `json:"batchCorrelationId,omitempty"`
 }
 
 func main() {
@@ -69,58 +75,57 @@ func main() {
 	time.Sleep(300 * time.Hour)
 }
 
-func getObj(i string) interface{} {
-	now := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
-	return PubsubMsg{
-		Key:                   i,
-		ID:                    now,
-		Details:               map[string]interface{}{"missing_labels": []interface{}{"test"}},
-		EventType:             "violation_audited",
-		Group:                 "constraints.gatekeeper.sh",
-		Version:               "v1beta1",
-		Kind:                  "K8sRequiredLabels",
-		Name:                  "pod-must-have-test",
-		Namespace:             "",
-		Message:               "you must provide labels: {\"test\"}",
-		EnforcementAction:     "deny",
-		ConstraintAnnotations: map[string]string(nil),
-		ResourceGroup:         "",
-		ResourceAPIVersion:    "v1",
-		ResourceKind:          "Pod",
-		ResourceNamespace:     "nginx",
-		ResourceName:          "dywuperf-deployment-10kpods-69bd64c867-h2wdx",
-		ResourceLabels:        map[string]string{"app": "dywuperf-app-100kpods", "pod-template-hash": "69bd64c867"},
-		Timestamp:             now,
-		BrokerName:            BROKERNAME}
-}
-
 func (r *Dapr) Send() {
+	var kustoIngestionClient =  NewKustoIngestionClient()
+
 	value := os.Getenv("NUMBER")
 	log.Printf("sending %s messages", value)
 	total, err := strconv.Atoi(value)
 	if err != nil {
 		log.Fatalf("error getting number: %v", err)
-		total = 100000
+		total = 1000000
 	}
 	ctx := context.Background()
-	start_time := time.Now()
-	log.Println("starting publish")
-	
-	for i := 0; i < total; i++ {
-		test := getObj(strconv.Itoa(i))
-		jsonData, err := json.Marshal(test)
-		if err != nil {
-			log.Fatalf("error marshaling data: %v", err)
-		}
 
-		for _, c := range r.client {
-			//Using Dapr SDK to publish a topic
-			// log.Println("Published data: " + string(jsonData))
-			if err := c.client.PublishEvent(ctx, PUBSUB_NAME, TOPIC_NAME, jsonData); err != nil {
-				panic(err)
+    // Always run
+	for true {
+		log.Println("starting publish")
+		start_time := time.Now()
+
+        // Each batch has a separate correlation id
+        batchCorrelationId := uuid.New().String();
+
+		for i := 0; i < total; i ++ {
+			msg := getObj(strconv.Itoa(i), batchCorrelationId)
+
+			for _, c := range r.client {
+
+				// Send to ingestion service to track drop rate
+				err = kustoIngestionClient.SendAsync(msg)
+				if err != nil {
+					// Continue if ingestion error, to do track count of these
+					log.Printf("Ingestion error for batchCorrelationId: %s, %v", batchCorrelationId, err)
+				}
+
+                // Set the published timestamp
+                msg.PublishedTimestamp = time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
+                jsonData, err := json.Marshal(msg)
+                if err != nil {
+                    log.Fatalf("error marshaling data: %v", err)
+                }
+
+                // Using Dapr SDK to publish a topic and send to Subscriber
+                // What is the publisher's streaming rate? Does the batching above significantly impact this rate
+                if err := c.client.PublishEvent(ctx, PUBSUB_NAME, TOPIC_NAME, jsonData); err != nil {
+                    panic(err)
+                }
 			}
 		}
+
+		end_time := time.Now()
+		log.Printf("total time it took %v", end_time.Sub(start_time))
+		
+        fmt.Println("Sleep starting now: ", time.Now())
+		time.Sleep(15*time.Minute);
 	}
-	end_time := time.Now()
-	log.Printf("total time it took %v", end_time.Sub(start_time))
 }
