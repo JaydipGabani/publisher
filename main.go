@@ -56,7 +56,7 @@ type PubsubMsg struct {
 	CorrelationId         string            `json:"correlationId,omitempty"`
 	PublishedTimestamp    string            `json:"publishedTimestamp,omitempty"`
 	ReceivedTimestamp     string            `json:"receivedTimestamp,omitempty"`
-    BatchCorrelationId    string            `json:"batchCorrelationId,omitempty"`
+	BatchCorrelationId    string            `json:"batchCorrelationId,omitempty"`
 }
 
 func main() {
@@ -87,13 +87,13 @@ func (r *Dapr) Send() {
 	}
 	ctx := context.Background()
 
-    // Always run
+	// Always run
 	for true {
 		log.Println("starting publish")
 		start_time := time.Now()
 
-        // Each batch has a separate correlation id
-        batchCorrelationId := uuid.New().String();
+		// Each batch has a separate correlation id
+		batchCorrelationId := uuid.New().String();
 
 		for i := 0; i < total; i ++ {
 			msg := getObj(strconv.Itoa(i), batchCorrelationId)
@@ -107,25 +107,25 @@ func (r *Dapr) Send() {
 					log.Printf("Ingestion error for batchCorrelationId: %s, %v", batchCorrelationId, err)
 				}
 
-                // Set the published timestamp
-                msg.PublishedTimestamp = time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
-                jsonData, err := json.Marshal(msg)
-                if err != nil {
-                    log.Fatalf("error marshaling data: %v", err)
-                }
+				// Set the published timestamp
+				msg.PublishedTimestamp = time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
+				jsonData, err := json.Marshal(msg)
+				if err != nil {
+					log.Fatalf("error marshaling data: %v", err)
+				}
 
-                // Using Dapr SDK to publish a topic and send to Subscriber
-                // What is the publisher's streaming rate? Does the batching above significantly impact this rate
-                if err := c.client.PublishEvent(ctx, PUBSUB_NAME, TOPIC_NAME, jsonData); err != nil {
-                    panic(err)
-                }
+				// Using Dapr SDK to publish a topic and send to Subscriber
+				// What is the publisher's streaming rate? Does the batching above significantly impact this rate
+				if err := c.client.PublishEvent(ctx, PUBSUB_NAME, TOPIC_NAME, jsonData); err != nil {
+					panic(err)
+				}
 			}
 		}
 
 		end_time := time.Now()
 		log.Printf("total time it took %v", end_time.Sub(start_time))
 		
-        fmt.Println("Sleep starting now: ", time.Now())
+		fmt.Println("Sleep starting now: ", time.Now())
 		time.Sleep(15*time.Minute);
 	}
 }
